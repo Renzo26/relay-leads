@@ -18,7 +18,7 @@ import type {
   LeadFilters, LeadSource, LeadStatus, ResponsibleArea, SlaStatus,
 } from "@/types/lead";
 
-export const Route = createFileRoute("/leads")({
+export const Route = createFileRoute("/leads/")({
   component: LeadsListPage,
 });
 
