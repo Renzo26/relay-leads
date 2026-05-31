@@ -1,29 +1,62 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { LeadCard } from "@/components/LeadCard";
+import { NewLeadDialog } from "@/components/NewLeadDialog";
+import { useLeadsList } from "@/hooks/useLeads";
+import { STATUS_LABEL } from "@/lib/lead-format";
+import type { LeadStatus, LeadWithContact } from "@/types/lead";
+
+const COLUMNS: LeadStatus[] = ["nova", "contactada", "qualificada", "encaminhada"];
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
-    ],
-  }),
-  component: Index,
+  component: PipelinePage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function PipelinePage() {
+  const [open, setOpen] = useState(false);
+  const { data: leads, isLoading } = useLeadsList();
+
+  const byStatus: Record<LeadStatus, LeadWithContact[]> = {
+    nova: [], contactada: [], qualificada: [], encaminhada: [],
+  };
+  leads?.forEach((l) => byStatus[l.status].push(l));
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
+    <AppLayout
+      title="Pipeline"
+      action={
+        <Button onClick={() => setOpen(true)} className="gap-1.5">
+          <Plus className="h-4 w-4" /> Nova Lead
+        </Button>
+      }
     >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {COLUMNS.map((col) => (
+          <div key={col} className="flex flex-col rounded-2xl bg-muted/40 border border-border min-h-[60vh]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h2 className="text-sm font-semibold">{STATUS_LABEL[col]}</h2>
+              <span className="text-xs text-muted-foreground rounded-full bg-card px-2 py-0.5 border border-border">
+                {byStatus[col].length}
+              </span>
+            </div>
+            <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+              {isLoading && (
+                <div className="text-xs text-muted-foreground text-center py-8">A carregar...</div>
+              )}
+              {!isLoading && byStatus[col].length === 0 && (
+                <div className="text-xs text-muted-foreground text-center py-8">Sem leads</div>
+              )}
+              {byStatus[col].map((lead) => (
+                <LeadCard key={lead.id} lead={lead} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <NewLeadDialog open={open} onOpenChange={setOpen} />
+    </AppLayout>
   );
 }
