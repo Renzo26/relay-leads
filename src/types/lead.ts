@@ -29,7 +29,8 @@ export type ActionType =
   | "lead_criada"
   | "primeiro_contacto"
   | "qualificacao"
-  | "encaminhamento";
+  | "encaminhamento"
+  | "sla_estourado";
 
 export interface Contact {
   id: string;

@@ -36,6 +36,60 @@ export const API_BASE_URL =
 
 const isMock = API_BASE_URL === "mock";
 
+// ── Transformers: API snake_case → frontend camelCase ────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromApiContact(raw: Record<string, any>): Contact {
+  return {
+    id: raw.id,
+    name: raw.name,
+    email: raw.email ?? undefined,
+    phone: raw.phone ?? undefined,
+    createdAt: raw.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromApiLead(raw: Record<string, any>): Lead {
+  return {
+    id: raw.id,
+    contactId: raw.contact_id,
+    source: raw.source,
+    campaign: raw.campaign ?? undefined,
+    utmSource: raw.utm_source ?? undefined,
+    utmMedium: raw.utm_medium ?? undefined,
+    utmCampaign: raw.utm_campaign ?? undefined,
+    message: raw.message ?? undefined,
+    status: raw.status,
+    responsibleArea: raw.responsible_area,
+    interest: raw.interest ?? undefined,
+    slaStatus: raw.sla_status ?? undefined,
+    createdAt: raw.created_at,
+    firstContactAt: raw.first_contact_at ?? undefined,
+    routedAt: raw.routed_at ?? undefined,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromApiLeadWithContact(raw: Record<string, any>): LeadWithContact {
+  return { ...fromApiLead(raw), contact: fromApiContact(raw.contact) };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromApiHistory(raw: Record<string, any>): LeadHistory {
+  return {
+    id: raw.id,
+    leadId: raw.lead_id,
+    actionType: raw.action_type,
+    timestamp: raw.created_at,
+    previousStatus: raw.previous_status ?? undefined,
+    newStatus: raw.new_status ?? undefined,
+    previousArea: raw.previous_area ?? undefined,
+    newArea: raw.new_area ?? undefined,
+    note: raw.note ?? undefined,
+  };
+}
+
 // Simulate network latency for realistic UX.
 const delay = (ms = 200) => new Promise((r) => setTimeout(r, ms));
 
@@ -63,7 +117,9 @@ export async function createLead(input: CreateLeadInput): Promise<LeadWithContac
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("Falha ao criar lead");
-    return res.json();
+    const data = await res.json();
+    // Backend returns { lead, contact, contact_reused }
+    return { ...fromApiLead(data.lead), contact: fromApiContact(data.contact) };
   }
   await delay();
 
@@ -109,10 +165,22 @@ export async function createLead(input: CreateLeadInput): Promise<LeadWithContac
 // GET /leads
 export async function listLeads(filters: LeadFilters = {}): Promise<LeadWithContact[]> {
   if (!isMock) {
-    const params = new URLSearchParams(filters as Record<string, string>);
+    // Map frontend filter keys to backend query param names
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.area) params.set("responsible_area", filters.area);
+    if (filters.sla) params.set("sla_status", filters.sla);
     const res = await fetch(`${API_BASE_URL}/leads?${params}`);
     if (!res.ok) throw new Error("Falha ao listar leads");
-    return res.json();
+    const data: Record<string, unknown>[] = await res.json();
+    let leads = data.map(fromApiLeadWithContact);
+    // source and search filters are not supported server-side — apply client-side
+    if (filters.source) leads = leads.filter((l) => l.source === filters.source);
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      leads = leads.filter((l) => l.contact.name.toLowerCase().includes(q));
+    }
+    return leads;
   }
   await delay(150);
   let leads = store.leads.map(computeSla);
@@ -148,7 +216,7 @@ export async function getLead(id: string): Promise<LeadWithContact> {
   if (!isMock) {
     const res = await fetch(`${API_BASE_URL}/leads/${id}`);
     if (!res.ok) throw new Error("Lead não encontrada");
-    return res.json();
+    return fromApiLeadWithContact(await res.json());
   }
   await delay(120);
   const lead = store.leads.find((l) => l.id === id);
@@ -168,7 +236,7 @@ export async function registerFirstContact(
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("Falha ao registar contacto");
-    return res.json();
+    return fromApiLeadWithContact(await res.json());
   }
   await delay();
   const idx = store.leads.findIndex((l) => l.id === id);
@@ -208,7 +276,7 @@ export async function qualifyLead(
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("Falha ao qualificar");
-    return res.json();
+    return fromApiLeadWithContact(await res.json());
   }
   await delay();
   const idx = store.leads.findIndex((l) => l.id === id);
@@ -229,11 +297,10 @@ export async function qualifyLead(
 }
 
 // POST /leads/:id/route
+// Backend merges qualification+routing in /qualification — just fetch current state.
 export async function routeLead(id: string): Promise<LeadWithContact> {
   if (!isMock) {
-    const res = await fetch(`${API_BASE_URL}/leads/${id}/route`, { method: "POST" });
-    if (!res.ok) throw new Error("Falha ao encaminhar");
-    return res.json();
+    return getLead(id);
   }
   await delay();
   const idx = store.leads.findIndex((l) => l.id === id);
@@ -262,7 +329,8 @@ export async function getLeadHistory(id: string): Promise<LeadHistory[]> {
   if (!isMock) {
     const res = await fetch(`${API_BASE_URL}/leads/${id}/history`);
     if (!res.ok) throw new Error("Falha ao carregar histórico");
-    return res.json();
+    const data: Record<string, unknown>[] = await res.json();
+    return data.map(fromApiHistory);
   }
   await delay(120);
   return store.history
