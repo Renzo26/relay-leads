@@ -9,7 +9,11 @@ import { useLeadsList } from "@/hooks/useLeads";
 import { STATUS_LABEL } from "@/lib/lead-format";
 import type { LeadStatus, LeadWithContact } from "@/types/lead";
 
-const COLUMNS: LeadStatus[] = ["nova", "contactada", "qualificada", "encaminhada"];
+const COLUMNS: LeadStatus[] = ["nova", "contactada", "encaminhada"];
+
+const COLUMN_LABEL: Partial<Record<LeadStatus, string>> = {
+  encaminhada: "Qualificada e Encaminhada",
+};
 
 export const Route = createFileRoute("/")({
   component: PipelinePage,
@@ -22,7 +26,10 @@ function PipelinePage() {
   const byStatus: Record<LeadStatus, LeadWithContact[]> = {
     nova: [], contactada: [], qualificada: [], encaminhada: [],
   };
-  leads?.forEach((l) => byStatus[l.status].push(l));
+  leads?.forEach((l) => {
+    const bucket = l.status === "qualificada" ? "encaminhada" : l.status;
+    byStatus[bucket].push(l);
+  });
 
   return (
     <AppLayout
@@ -33,11 +40,11 @@ function PipelinePage() {
         </Button>
       }
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-4">
         {COLUMNS.map((col) => (
           <div key={col} className="flex flex-col rounded-2xl bg-muted/40 border border-border min-h-[60vh]">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h2 className="text-sm font-semibold">{STATUS_LABEL[col]}</h2>
+              <h2 className="text-sm font-semibold">{COLUMN_LABEL[col] ?? STATUS_LABEL[col]}</h2>
               <span className="text-xs text-muted-foreground rounded-full bg-card px-2 py-0.5 border border-border">
                 {byStatus[col].length}
               </span>
