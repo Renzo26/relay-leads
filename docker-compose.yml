@@ -2,14 +2,23 @@ services:
   frontend:
     build:
       context: .
+      dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://portfloio-4-improvements.e4xqua.easypanel.host}
-    restart: unless-stopped
     environment:
       HOST: "0.0.0.0"
       PORT: "3000"
+    restart: unless-stopped
     networks:
-      - easypanel
+      easypanel:
+        aliases:
+          - cloudy_4improvements_frontend
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   easypanel:
