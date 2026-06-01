@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Use Node.js HTTP server for Docker/EasyPanel deployment instead of the Cloudflare Workers default.
+  nitro: {
+    preset: "node_server",
+  },
 });

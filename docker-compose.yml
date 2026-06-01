@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://portfloio-4-improvements.e4xqua.easypanel.host}
+    restart: unless-stopped
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3000"
+    networks:
+      - easypanel
+
+networks:
+  easypanel:
+    external: true
