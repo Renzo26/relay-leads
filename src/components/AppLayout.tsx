@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, Users, Info } from "lucide-react";
+import { LayoutGrid, Users, Info, BarChart2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", label: "Pipeline", icon: LayoutGrid, exact: true },
   { to: "/leads", label: "Leads", icon: Users, exact: false },
+  { to: "/dashboard", label: "Dashboard", icon: BarChart2, exact: false },
   { to: "/sobre", label: "Sobre", icon: Info, exact: false },
 ];
 
@@ -56,7 +57,7 @@ export function AppLayout({
           })}
         </nav>
         <div className="p-4 text-xs text-muted-foreground border-t border-sidebar-border">
-          v0.1 · Mock data
+          v0.1 · 4Improvements
         </div>
       </aside>
 
